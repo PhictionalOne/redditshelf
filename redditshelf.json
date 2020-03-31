@@ -1,0 +1,13 @@
+{
+  "author" : "Alexander Phi. Goetz",
+  "license" : "CC-BY-NC 4.0",
+  "destination-folder": "~/",
+  "last-update" : "2020-04-01",
+  "stories": [
+    {
+      "title": "The Galactic Archives Present Humanity",
+      "reddit": "https://www.reddit.com/r/HFY/comments/flb50l/the_galactic_archives_present_humanity/",
+      "file": "~/the_galactic_archives_present_humanity.epub"
+    }
+  ]
+}
