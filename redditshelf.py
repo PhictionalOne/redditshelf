@@ -1,91 +1,82 @@
 #! /bin/python
 
-import os, sys, getopt, json, string
-from pathlib import Path
+import json
+import os
+import string
+import sys
 from datetime import date
+from pathlib import Path
+import click
 
 # License: CC-BY-NC 4.0
 # Author:  Alexander Phi. Goetz
 
+config = Path('./redditshelf.json')
 
-config=Path("./redditshelf.json")
 
-def help():
-    """
-    Just displays help
-    """
+@click.group()
+def cli():
+    if config.exists():
+        pass
+    else:
+        print('FATAL: No config file found!')
+        sys.exit(2)
 
-    message =
-        """
-        redditshelf [options]
-        ====================
-        Fetch your favorite redditserials.
-        Requires 'reddit2epub'
 
-        -h              Show this help
-        -l              List Reddit stories
-        -u              Update the shelf
-        -a <address>    Adds link to known stories
-            -t TITLE        Set TITLE
-            -o FILE         Set file destination
-        -O FOLDER       Set destination Folder
-        -d TITLE        Deletes TITLE from known stories
-        """
-    print(help)
-
+@cli.command(name='list',
+             short_help='Lists stories',
+             help='Shows a list of all tracked stories')
 def list_stories():
     """
     Shows a list of all tracked stories
     """
 
     with open(config) as json_file:
-        stories = json.load(json_file)["stories"]
-        count   = len(stories)
-        out     = "[{}] \"{}\" - {}"
-        header  =
-        """
-        |||||||\\   shelf   /|||||||
-        ---------------------------
-        Last update: {}
-        ---------------------------
-        """
-
-        # IDEA: Use the below shelf instead of the above
-        shelf   =
-        """
-                      .--.                   .---.
-                  .---|__|           .-.     |~~~|
-               .--|===|--|_          |_|     |~~~|--.
-               |  |===|  |'\     .---!~|  .--|   |--|
-               |%%|   |  |.'\    |===| |--|%%|   |  |
-               |%%|   |  |\.'\   |   | |__|  |   |  |
-               |  |   |  | \  \  |===| |==|  |   |  |
-               |  |   |__|  \.'\ |   |_|__|  |~~~|__|
-               |  |===|--|   \.'\|===|~|--|%%|~~~|--|
-               ^--^---'--^    `-'`---^-^--^--^---'--' hjw
+        cfg = json.load(json_file)
+        stories = cfg["stories"]
+        count = len(stories)
+        out = '[{}] "{}" \n\t> {}'
+        header = """
+,_, ,_, ,_, ,_, ,_,                ,_, ,_, ,_, ,_, ,_, 
+| | | | | | | | | |  Last Update:  | | | | | | | | | |
+|1| |2| |3| |4| |5|   {}   |6| |7| |8| |9| |0|
+|_| |_| |_| |_| |_|                |_| |_| |_| |_| |_|
+===================[ Reddit-Shelf ]===================
         """
 
-        print(header.format(json.load(json_file)["last-update"]))
+        print(header.format(cfg['last-update']))
 
-        for i in range(0,count):
-            print(out.format(i, stories[i]["title"], stories[i]["file"]))
+        for i in range(0, count):
+            print(out.format(i, stories[i]['title'], stories[i]['file']))
 
-def update_stories():
+
+@cli.command(short_help='Update Shelf contents',
+             help='Updates the epub files of tracked stories')
+def update():
     """
     Updates the epub files of tracked stories
     """
 
+    cfg = None
+
     with open(config) as json_file:
-        data = json.load(json_file)
+        cfg = json.load(json_file)
 
-        for i in range(0,len(data["stories"])):
-            reddit  = data["stories"][i]["reddit"]
-            file    = data["stories"][i]["file"]
-            os.system("reddit2epub -i {} -o {}".format(reddit, file))
+    for i in range(0, len(cfg['stories'])):
+        reddit = cfg['stories'][i]['reddit']
+        file = cfg['stories'][i]['file']
+        os.system('reddit2epub -i {} -o {}'.format(reddit, file))
 
-        data["last-update"] = date.today().isoformat()
-        json.dump(data, json_file)
+    # Write the new Date in the config file
+    with open(config, "w") as json_file:
+        cfg['last-update'] = date.today().isoformat()
+        json.dump(cfg, json_file, indent=4, sort_keys=True)
 
+
+@cli.command(name='set-folder',
+             short_help='Set destination folder',
+             help='Sets the folder where the should be saved to')
+@click.argument('folder')
 def set_folder(folder):
     """
     Sets the folder where the Stories should be saved to
@@ -94,60 +85,82 @@ def set_folder(folder):
     folder (String):    The folder
     """
 
-    if Path(folder).is_dir():
-        with open(config, "w+") as json_file:
-            cfg = json.load(json_file)
-            cfg["destination-folder"] = folder
-            json.dump(cfg, json_file)
+    new_folder = Path(folder)
 
-    else
-        print("No such folder")
+    if new_folder.is_dir():
+        cfg = None
+        with open(config) as json_file:
+            cfg = json.load(json_file)
+        old_folder = Path(cfg["destination-folder"])
+
+        # Change folder for every Story with old_folder as parent directory
+        for i in range(0, len(cfg["stories"])):
+            current = Path(cfg["stories"][i]["file"])
+
+            if current.parent == old_folder:
+                cfg["stories"][i]["file"] = str(new_folder / current.name)
+
+        cfg['destination-folder'] = str(new_folder)
+
+        with open(config, 'w') as json_file:
+            json.dump(cfg, json_file, indent=4, sort_keys=True)
+        print(folder + " is set as new Destination")
+
+    else:
+        print('Folder not found. Make sure it is an existing folder')
         sys.exit(2)
 
-def add_story(**kwargs):
+
+@cli.command(short_help='Adds a new story to the shelf',
+             help='Adds to a new story to the shelf and downloads it as well')
+@click.argument('link', required=True)
+@click.option('--title', '-t', default=None, required=False,
+              help='Set a title for the story. Defaults to capitalized link name')
+@click.option('--output', '-o', default=None, required=False,
+              help='Set a file path where the epub should be stored')
+def add(link, title, output):
     """
     Adds a Reddit Story to the shelf
 
     Parameters:
     link (String):      The link to any Reddit Story's Chapter
     title (String):     The title you would like to store it in your redditshelf
-    address (String):   The address where the actual file is saved to
+    output (String):    The address where the actual file is saved to
     """
 
-    link     = kwargs.get('link', None)
-    title    = kwargs.get('title', None)
-    address  = kwargs.get('address', None)
+    template = '"title":"{}", "reddit":"{}", "file":"{}"'
 
-    template =
-        """
-        {
-            "title": {},
-            "reddit": {},
-            "file": {}
-        }
-        """
+    def sanitize(str_in):
+        bad_ones = ";:|/\\!?,%*<>\"\'"
+        for l in bad_ones:
+            str_in = str_in.replace(l, '')
+        return str_in
 
-    with open(config, "w+") as json_file:
+    data = None
+
+    with open(config) as json_file:
         data = json.load(json_file)
 
-        if not link:
-            print("No redditlink given")
-            sys.exit(2)
+    if not title:
+        title = string.capwords(Path(link).stem.replace('_', ' '))
 
-        if not title:
-            title = string.capwords(Path(link).stem.replace("_"," "))
+    if not output:
+        dest_folder = Path(data['destination-folder'])
+        output = dest_folder / (sanitize(title.replace(' ', '_').lower()) + '.epub')
 
-        if not address:
-            dest_folder = Path(data["destination_folder"])
-            address = dest_folder / title.replace(" ","_").lower() / ".epub"
-            # TODO: Remove prohibited chars from title
+    data['stories'].append(json.loads('{' + template.format(title, link, output) + '}'))
+    with open(config, "w") as json_file:
+        json.dump(data, json_file, indent=4, sort_keys=True)
 
-        data["stories"].append(template.format(title,link,address))
-        json.dump(data, json_file)
+    os.system('reddit2epub -i {} -o {}'.format(link, output))
 
-    os.system('reddit2epub -i {} -o {}'.format(link,address))
+    print(title + ' has been added')
 
-def delete_story(story):
+
+@cli.command(short_help='Delete a story',
+             help='Deletes a story from your shelf and the epub file. STORY can either be the Index or the Title')
+@click.argument('story')
+def delete(story):
     """
     Deletes a Story from your shelf
 
@@ -155,76 +168,37 @@ def delete_story(story):
     story (Int|String): Identifier of the Json Object
     """
 
-    with open(config, "w+") as json_file:
+    data = None
+
+    with open(config) as json_file:
         data = json.load(json_file)
 
-        if story.isnumeric() and int(story) < len(data["stories"]):
-            file = Path(data["stories"][int(story)]["file"])
-            os.system('rm {}'.format(file))
-            del data["stories"][int(story)]
+    if story.isnumeric() and int(story) < len(data['stories']):
+        file = Path(data['stories'][int(story)]['file'])
+        os.system('rm {}'.format(file))
+        del data['stories'][int(story)]
+        print('Story at {} has been deleted'.format(story))
 
-        elif not story.isnumeric():
-            key = None
+    elif not story.isnumeric():
+        key = None
 
-            for i in range(0,len(data["stories"])):
-                if data["stories"][i]["title"] == story:
-                    key = i
-                    os.system("rm {}".format(data["stories"][i]["file"]))
-                    break
+        for i in range(0, len(data['stories'])):
+            if data['stories'][i]['title'] == story:
+                key = i
+                os.system('rm {}'.format(data['stories'][i]['file']))
+                break
 
-            if key:
-                del data["stories"][key]
+        if key:
+            del data['stories'][key]
+            print(story + ' has been deleted')
 
-        else
-            print("Not a valid index or title not found")
-            sys.exit(2)
-        json.dump(data, json_file)
-
-
-def main(argv):
-    try:
-        opts, args = getopt.getopt(argv,"hla:t:d:o:")
-    except getopt.GetoptError:
-        help()
+    else:
+        print('Not a valid index or title not found')
         sys.exit(2)
 
-    for opt, arg in opts:
-        if opt == '-h':
-            help()
-            sys.exit()
+    with open(config, 'w') as json_file:
+        json.dump(data, json_file, indent=4, sort_keys=True)
 
-        elif opt == '-l' and config.exists():
-            list_stories()
-            sys.exit()
-
-        elif opt == '-u' and config.exists():
-            update_stories()
-            sys.exit()
-
-        elif opt == '-a' and config.exits():
-            if '-t' in opts or '-o' in opts:
-                title = None
-                dest  = None
-                for opt2, arg2 in opts:
-                    if opt == '-t':
-                        title = arg2
-                    elif opt == '-o':
-                        dest = arg2
-                add_story(link=arg, title=title, address=dest)
-            else
-                add_story(link=arg)
-            sys.exit()
-
-        elif opt == '-O' and config.exists():
-            set_folder(arg)
-            sys.exit()
-
-        elif opt == '-d' and config.exists():
-            delete_story(arg)
-            sys.exit()
-        else
-            print("No config file found")
-            sys.exit(2)
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    cli()
