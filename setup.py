@@ -17,7 +17,8 @@ setup(
     py_modules=['redditshelf,py'],
     install_requires=[
         'Click',
-        'Pathlib'
+        'Pathlib',
+        'reddit2epub'
     ],
     entry_points='''
         [console_scripts]

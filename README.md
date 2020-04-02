@@ -4,9 +4,6 @@ A script to organize reddit serials and storys.
 Inspired by Mirco Haug's [reddit2epub](https://github.com/mircohaug/reddit2epub)
 
 # Install
-Install [reddit2epub](https://github.com/mircohaug/reddit2epub): `pip install reddit2epub`
-
-Install *redditshelf*:
 ```
 git clone https://github.com/PhictionalOne/redditshelf.git
 cd redditshelf/
