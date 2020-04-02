@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 import click
 
-# License: CC-BY-NC 4.0
+# License: GNU General Public License v3 (GPLv3)
 # Author:  Alexander Phi. Goetz
 
 config = Path('./redditshelf.json')
@@ -252,6 +252,3 @@ def delete(story):
     with open(config, 'w') as json_file:
         json.dump(data, json_file, indent=4, sort_keys=True)
 
-
-if __name__ == "__main__":
-    cli()
