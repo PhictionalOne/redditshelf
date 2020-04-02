@@ -4,14 +4,16 @@ A script to organize reddit serials and storys.
 Inspired by Mirco Haug's [reddit2epub](https://github.com/mircohaug/reddit2epub)
 
 # Requirements
-Have [reddit2epub](https://github.com/mircohaug/reddit2epub) installed.
+Have [reddit2epub](https://github.com/mircohaug/reddit2epub) installed. Install using:
+
+```pip install reddit2epub```
 
 # Usage
 
 ```
 Usage: redditshelf.py [OPTIONS] COMMAND [ARGS]...
 
-  Redditshelf organizes your Reddit Stories' EBooks
+  Redditshelf organizes your favorite stories and updates them
 
 Options:
   --help  Show this message and exit.
@@ -19,6 +21,7 @@ Options:
 Commands:
   add         Adds a new story to the shelf
   delete      Delete a story
+  edit        Edit existing entry
   list        Lists stories
   set-folder  Set destination folder
   update      Update Shelf contents
@@ -31,7 +34,7 @@ Commands:
 
 ,_, ,_, ,_, ,_, ,_,                ,_, ,_, ,_, ,_, ,_,
 | | | | | | | | | |  Last Update:  | | | | | | | | | |
-|1| |2| |3| |4| |5|   2020-04-01   |6| |7| |8| |9| |0|
+|0| |1| |2| |3| |4|   2020-04-01   |5| |6| |7| |8| |9|
 |_| |_| |_| |_| |_|                |_| |_| |_| |_| |_|
 ===================[ Reddit-Shelf ]===================
 
@@ -47,8 +50,9 @@ Commands:
 
 # Roadmap
 ## Features
-* [ ] Edit existing entries
+* [x] ~~Edit existing entries~~
 * [ ] Specify a config file
+* [ ] option passtrough to `reddit2epub`
 
 ## Other
 * [ ] Refactor code 

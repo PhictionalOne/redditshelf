@@ -14,7 +14,7 @@ import click
 config = Path('./redditshelf.json')
 
 
-@click.group()
+@click.group(help="Redditshelf organizes your favorite stories and updates them")
 def cli():
     if config.exists():
         pass
@@ -39,7 +39,7 @@ def list_stories():
         header = """
 ,_, ,_, ,_, ,_, ,_,                ,_, ,_, ,_, ,_, ,_, 
 | | | | | | | | | |  Last Update:  | | | | | | | | | |
-|1| |2| |3| |4| |5|   {}   |6| |7| |8| |9| |0|
+|0| |1| |2| |3| |4|   {}   |5| |6| |7| |8| |9|
 |_| |_| |_| |_| |_|                |_| |_| |_| |_| |_|
 ===================[ Reddit-Shelf ]===================
         """
@@ -79,12 +79,10 @@ def update():
 @click.argument('folder')
 def set_folder(folder):
     """
-    Sets the folder where the Stories should be saved to
+    Sets the default destination folder for epub files
 
-    Parameter:
-    folder (String):    The folder
+    :param folder:  The folder to be written to
     """
-
     new_folder = Path(folder)
 
     if new_folder.is_dir():
@@ -120,12 +118,11 @@ def set_folder(folder):
               help='Set a file path where the epub should be stored')
 def add(link, title, output):
     """
-    Adds a Reddit Story to the shelf
+    Add a Story to shelf
 
-    Parameters:
-    link (String):      The link to any Reddit Story's Chapter
-    title (String):     The title you would like to store it in your redditshelf
-    output (String):    The address where the actual file is saved to
+    :param link:    Reddit link to be used
+    :param title:   Title of the entry
+    :param output:  File to write EPUB
     """
 
     template = '"title":"{}", "reddit":"{}", "file":"{}"'
@@ -157,17 +154,73 @@ def add(link, title, output):
     print(title + ' has been added')
 
 
+@cli.command(short_help='Edit existing entry',
+             help='Edit an existing entry using the ID or the TITLE')
+@click.argument('story', required=True)
+@click.option('--title', '-t', default=None, required=False,
+              help='Sets a new Title')
+@click.option('--dest', '-d', default=None, required=False,
+              help='Sets a new file destination')
+@click.option('--link', '-l', default=None, required=False,
+              help='Sets a new Reddit-link')
+def edit(story, title, dest, link):
+    """
+    Edit an existing Entry
+
+    :param story:   Title or ID of entry
+    :param title:   Title to be set
+    :param dest:    Destination to be set
+    :param link:    Reddit link to be set
+    """
+    if not title and not dest and not link:
+        print('Nothing changed')
+        sys.exit()
+
+    data = None
+    key = None
+    with open(config) as json_file:
+        data = json.load(json_file)
+
+    if story.isnumeric() and int(story) < len(data['stories']):
+        key = int(story)
+
+    elif not story.isnumeric():
+        for i in range(0, len(data['stories'])):
+            if story == data['stories'][i]['title']:
+                key = i
+                break
+
+    else:
+        print('No valid ID or TITLE')
+        sys.exit(2)
+
+    if title:
+        data['stories'][key]['title'] = title
+        print("\"{}\"'s title is now \"{}\"".format(story, title))
+
+    if dest:
+        data['stories'][key]['file'] = dest
+        print("\"{}\"'s file is now found at \"{}\"".format(story, dest))
+
+    if link:
+        data['stories'][key]['reddit'] = link
+        print("\"{}\"'s link is now \"{}\"".format(story, link))
+
+    with open(config, 'w') as json_file:
+        json.dump(data, json_file, indent=4, sort_keys=True)
+
+    print('Done editing. \n\nTo update please use `redditshelf.py update`')
+
+
 @cli.command(short_help='Delete a story',
              help='Deletes a story from your shelf and the epub file. STORY can either be the Index or the Title')
 @click.argument('story')
 def delete(story):
     """
-    Deletes a Story from your shelf
+    Deletes an entry from the Shelf
 
-    Parameters:
-    story (Int|String): Identifier of the Json Object
+    :param story:   The Title or ID of the entry
     """
-
     data = None
 
     with open(config) as json_file:
