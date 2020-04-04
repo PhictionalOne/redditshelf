@@ -8,6 +8,7 @@ Inspired by Mirco Haug's [reddit2epub](https://github.com/mircohaug/reddit2epub)
 git clone https://github.com/PhictionalOne/redditshelf.git
 cd redditshelf/
 pip install --editable .
+redditshelf init
 ```
 
 # Usage
@@ -24,6 +25,7 @@ Commands:
   add         Adds a new story to the shelf
   delete      Delete a story
   edit        Edit existing entry
+  init        Creates Config file
   list        Lists stories
   set-folder  Set destination folder
   update      Update Shelf contents
@@ -51,10 +53,13 @@ Commands:
 ```
 
 # Roadmap
-## Features
+## Future Features
 * [x] ~~Edit existing entries~~
 * [ ] Specify a config file
+    * [x] Put a config file into `.config`
+    * [ ] Use custom config
 * [ ] option passtrough to `reddit2epub`
+* [ ] Multiple shelves
 
 ## Other
 * [ ] Refactor code 
