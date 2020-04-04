@@ -244,12 +244,16 @@ def edit(story, title, dest, link):
         print("\"{}\"'s title is now \"{}\"".format(story, title))
 
     if dest:
+        os.system('rm {}'.format(data['stories'][key]['file']))
         data['stories'][key]['file'] = dest
         print("\"{}\"'s file is now found at \"{}\"".format(story, dest))
 
     if link:
         data['stories'][key]['reddit'] = link
         print("\"{}\"'s link is now \"{}\"".format(story, link))
+
+    os.system('reddit2epub -i {} -o {}'.format(data['stories'][key]['reddit'],
+                                               data['stories'][key]['file']))
 
     with open(config, 'w') as json_file:
         json.dump(data, json_file, indent=4, sort_keys=True)
