@@ -11,16 +11,54 @@ import click
 # License: GNU General Public License v3 (GPLv3)
 # Author:  Alexander Phi. Goetz
 
-config = Path('./redditshelf.json')
+config = Path.home() / '.config' / 'redditshelf.json'
 
 
-@click.group(help="Redditshelf organizes your favorite stories and updates them")
-def cli():
-    if config.exists():
-        pass
-    else:
-        print('FATAL: No config file found!')
+def check_config():
+    if not config.exists():
+        print("""
+FATAL: No config file found!
+
+To Set a config file use
+    `redditshelf init`
+""")
         sys.exit(2)
+
+
+@click.group(help='Redditshelf organizes your favorite stories and updates them')
+def cli():
+    pass
+
+
+@cli.command(short_help='Creates Config file',
+             help='Creates config file and sets up environment')
+@click.option('--force', '-f', is_flag=True, default=False, required=False,
+              help='Overwrite existing config file')
+def init(force):
+    template = '''
+{
+    "author": "Alexander Phi. Goetz",
+    "custom-config": "~",
+    "destination-folder": "~/cloud-phi/Books/",
+    "last-update": "2020-04-04",
+    "license": "CC-BY-NC 4.0",
+    "stories": [
+        {
+            "file": "~/the_galactic_archives_present_humanity.epub",
+            "reddit": "https://www.reddit.com/r/HFY/comments/flb50l/the_galactic_archives_present_humanity/",
+            "title": "The Galactic Archives Present Humanity"
+        }
+    ]
+}
+'''
+    if config.exists() and not force:
+        print('Config file already exists\nNothings changed')
+        sys.exit()
+
+    else:
+        with open(config, 'w+') as json_file:
+            json.dump(json.loads(template), json_file, indent=4, sort_keys=True)
+        print('Shelf initialized')
 
 
 @cli.command(name='list',
@@ -30,6 +68,7 @@ def list_stories():
     """
     Shows a list of all tracked stories
     """
+    check_config()
 
     with open(config) as json_file:
         cfg = json.load(json_file)
@@ -56,6 +95,7 @@ def update():
     """
     Updates the epub files of tracked stories
     """
+    check_config()
 
     cfg = None
 
@@ -83,6 +123,8 @@ def set_folder(folder):
 
     :param folder:  The folder to be written to
     """
+    check_config()
+
     new_folder = Path(folder)
 
     if new_folder.is_dir():
@@ -124,6 +166,7 @@ def add(link, title, output):
     :param title:   Title of the entry
     :param output:  File to write EPUB
     """
+    check_config()
 
     template = '"title":"{}", "reddit":"{}", "file":"{}"'
 
@@ -172,6 +215,8 @@ def edit(story, title, dest, link):
     :param dest:    Destination to be set
     :param link:    Reddit link to be set
     """
+    check_config()
+
     if not title and not dest and not link:
         print('Nothing changed')
         sys.exit()
@@ -221,6 +266,8 @@ def delete(story):
 
     :param story:   The Title or ID of the entry
     """
+    check_config()
+
     data = None
 
     with open(config) as json_file:
@@ -251,4 +298,3 @@ def delete(story):
 
     with open(config, 'w') as json_file:
         json.dump(data, json_file, indent=4, sort_keys=True)
-

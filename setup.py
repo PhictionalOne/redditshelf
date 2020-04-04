@@ -14,6 +14,7 @@ setup(
     url='https://github.com/PhictionalOne/redditshelf.git',
     author='Alexander Phi. Goetz',
     author_email='code@phictional.de',
+    license='GNU General Public License v3 (GPLv3)',
     py_modules=['redditshelf,py'],
     install_requires=[
         'Click',
