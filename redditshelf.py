@@ -7,6 +7,8 @@ import sys
 from datetime import date
 from pathlib import Path
 import click
+from ebooklib import epub
+from reddit2epub.reddit2epubLib import get_chapters_from_anchor, create_book_from_chapters
 
 # License: GNU General Public License v3 (GPLv3)
 # Author:  Alexander Phi. Goetz
@@ -23,6 +25,44 @@ To Set a config file use
     `redditshelf init`
 """)
         sys.exit(2)
+
+
+def create_book(input_url: str,
+                title: str,
+                output_filename: str,
+                overlap: int = 2,
+                all_reddit: bool = False):
+    """
+    Modified code copied from the reddit2epub CLI code.
+
+    https://github.com/mircohaug/reddit2epub/blob/master/reddit2epub/reddit2epubCli.py
+    """
+
+    author, selected_submissions, search_title = get_chapters_from_anchor(input_url, overlap, all_reddit)
+
+    len_subs = len(selected_submissions)
+    print("Total number of found posts with title prefix '{}' in subreddit: {}".format(search_title, len_subs))
+
+    if len_subs == 1:
+        raise Exception("No other chapters found, which share the first {} words with other posts from this "
+                        "author in this subreddit.".format(overlap))
+    elif len_subs == 0:
+        raise Exception("No text chapters found")
+    elif len_subs >= 200:
+        print("Got more than 200 submissions from author in this subreddit :-O. "
+              "It may be possible that old chapters are not included.",
+              file=sys.stderr)
+
+    # set metadata
+    book_id = selected_submissions[-1].id
+    book_title = title
+    book_author = author.name
+
+    # Build the ebook
+    book = create_book_from_chapters(book_author, book_id, book_title, reversed(selected_submissions))
+
+    # write to the file
+    epub.write_epub(output_filename, book, {})
 
 
 @click.group(help='Redditshelf organizes your favorite stories and updates them')
@@ -102,10 +142,13 @@ def update():
     with open(config) as json_file:
         cfg = json.load(json_file)
 
+    print('Updating')
     for i in range(0, len(cfg['stories'])):
         reddit = cfg['stories'][i]['reddit']
         file = cfg['stories'][i]['file']
-        os.system('reddit2epub -i {} -o {}'.format(reddit, file))
+        title = cfg['stories'][i]['title']
+        create_book(reddit, title, file)
+    print('Finished')
 
     # Write the new Date in the config file
     with open(config, "w") as json_file:
@@ -192,7 +235,7 @@ def add(link, title, output):
     with open(config, "w") as json_file:
         json.dump(data, json_file, indent=4, sort_keys=True)
 
-    os.system('reddit2epub -i {} -o {}'.format(link, output))
+    create_book(link, title, output)
 
     print(title + ' has been added')
 
@@ -252,8 +295,7 @@ def edit(story, title, dest, link):
         data['stories'][key]['reddit'] = link
         print("\"{}\"'s link is now \"{}\"".format(story, link))
 
-    os.system('reddit2epub -i {} -o {}'.format(data['stories'][key]['reddit'],
-                                               data['stories'][key]['file']))
+    create_book(data['stories'][key]['reddit'], data['stories'][key]['title'], data['stories'][key]['file'])
 
     with open(config, 'w') as json_file:
         json.dump(data, json_file, indent=4, sort_keys=True)

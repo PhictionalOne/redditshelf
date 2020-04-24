@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'Click',
         'Pathlib',
-        'reddit2epub'
+        'reddit2epub>=0.5.0'
     ],
     entry_points='''
         [console_scripts]
